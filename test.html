@@ -79,7 +79,8 @@
                     <i class="fa-solid fa-leaf"></i>
                 </div>
                 <h2 class="text-2xl font-extrabold text-slate-900" id="authTitle">Masuk ke Finora</h2>
-                <p class="text-xs text-slate-500" id="authSubtitle">Kelola keuangan Anda dengan mudah dan terintegrasi Supabase</p>
+                <p class="text-xs text-slate-500" id="authSubtitle">Kelola keuangan Anda dengan mudah dan terintegrasi
+                    Supabase</p>
             </div>
 
             <!-- Tab Switcher: Masuk vs Daftar -->
@@ -100,12 +101,14 @@
             <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat Email</label>
-                    <input type="email" id="loginEmail" required placeholder="contoh: user@gmail.com" value="ayesha.khan@gmail.com"
+                    <input type="email" id="loginEmail" required placeholder="contoh: user@gmail.com"
+                        value="ayesha.khan@gmail.com"
                         class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Kata Sandi</label>
-                    <input type="password" id="loginPassword" required placeholder="Minimal 6 karakter" minlength="6" value="123456"
+                    <input type="password" id="loginPassword" required placeholder="Minimal 6 karakter" minlength="6"
+                        value="123456"
                         class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
                 </div>
                 <button type="submit" id="btnAuthSubmit"
@@ -258,7 +261,8 @@
                 <div class="flex justify-between items-center mb-4 gap-2">
                     <div class="min-w-0 flex-1">
                         <h3 class="font-bold text-slate-800 text-sm sm:text-base">Transaksi Terakhir</h3>
-                        <p class="text-[11px] sm:text-xs text-slate-400 truncate">Dilengkapi indikator pemasukan & pengeluaran</p>
+                        <p class="text-[11px] sm:text-xs text-slate-400 truncate">Dilengkapi indikator pemasukan &
+                            pengeluaran</p>
                     </div>
                     <a href="#" onclick="navigateTo('analytics')"
                         class="text-xs font-semibold text-emerald-600 hover:underline flex items-center gap-1 shrink-0 whitespace-nowrap">
@@ -572,10 +576,27 @@
     <script>
         // ==================== SUPABASE CONFIGURATION ====================
         const SUPABASE_URL = 'https://izoachcdrusahgrvkpht.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_nikm2MEEzbC5zJG9uiqolA_BQ1XTHB-';
-        const supabase = (typeof window.supabase !== 'undefined' && window.supabase.createClient)
-            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-            : null;
+        // Ganti token di bawah ini dengan Supabase Anon Key asli kamu (diawali eyJ...)
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6b2FjaGNkcnVzYWhncnZrcGh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDU0NTEsImV4cCI6MjEwODc4MTQ1MX0.r2IUJbCZPduI7tixupBwXlMlGESBoLJdF2TIXksNLhk';
+
+        // Inisialisasi client tanpa deklarasi const ganda
+        if (typeof window.supabaseClient === 'undefined') {
+            window.supabaseClient = (typeof window.supabase !== 'undefined' && window.supabase.createClient)
+                ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+                : null;
+        }
+        const supabase = window.supabaseClient;
+        // p
+
+
+
+
+        // // ==================== SUPABASE CONFIGURATION ====================
+        // const SUPABASE_URL = 'https://izoachcdrusahgrvkpht.supabase.co';
+        // const SUPABASE_KEY = 'sb_publishable_nikm2MEEzbC5zJG9uiqolA_BQ1XTHB-';
+        // const supabase = (typeof window.supabase !== 'undefined' && window.supabase.createClient)
+        //     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+        //     : null;
 
         function formatRupiah(number) {
             return new Intl.NumberFormat('id-ID', {
