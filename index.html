@@ -70,32 +70,47 @@
 
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen antialiased flex flex-col md:flex-row">
 
-    <!-- ==================== LOGIN SCREEN ==================== -->
+    <!-- ==================== LOGIN / SIGN UP SCREEN (SUPABASE AUTH) ==================== -->
     <div id="pageLogin" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-3xl p-8 space-y-6 shadow-2xl">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-5 shadow-2xl">
             <div class="text-center space-y-2">
                 <div
                     class="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-bold text-2xl mx-auto shadow-lg shadow-emerald-600/30">
                     <i class="fa-solid fa-leaf"></i>
                 </div>
-                <h2 class="text-2xl font-extrabold text-slate-900">Masuk ke Finora</h2>
-                <p class="text-xs text-slate-500">Kelola keuangan Anda dengan mudah dan terintegrasi</p>
+                <h2 class="text-2xl font-extrabold text-slate-900" id="authTitle">Masuk ke Finora</h2>
+                <p class="text-xs text-slate-500" id="authSubtitle">Kelola keuangan Anda dengan mudah dan terintegrasi Supabase</p>
             </div>
 
-            <form onsubmit="handleLogin(event)" class="space-y-4">
+            <!-- Tab Switcher: Masuk vs Daftar -->
+            <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                <button type="button" id="tabLogin" onclick="switchAuthMode('login')"
+                    class="flex-1 py-2 rounded-lg bg-white text-slate-800 shadow-sm transition">
+                    Masuk
+                </button>
+                <button type="button" id="tabRegister" onclick="switchAuthMode('register')"
+                    class="flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition">
+                    Daftar Akun
+                </button>
+            </div>
+
+            <!-- Feedback / Alert Message -->
+            <div id="authAlert" class="hidden p-3 rounded-xl text-xs flex items-center space-x-2"></div>
+
+            <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Email / Username</label>
-                    <input type="text" id="loginEmail" required value="ayesha.khan@gmail.com"
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat Email</label>
+                    <input type="email" id="loginEmail" required placeholder="contoh: user@gmail.com" value="ayesha.khan@gmail.com"
                         class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Kata Sandi</label>
-                    <input type="password" id="loginPassword" required value="123456"
+                    <input type="password" id="loginPassword" required placeholder="Minimal 6 karakter" minlength="6" value="123456"
                         class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
                 </div>
-                <button type="submit"
-                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition">
-                    Masuk
+                <button type="submit" id="btnAuthSubmit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition flex items-center justify-center space-x-2">
+                    <span id="btnAuthText">Masuk</span>
                 </button>
             </form>
         </div>
@@ -618,9 +633,114 @@
         let analyticsChart = null;
         let budgetChart = null;
 
-        // Login & Logout Handlers
-        function handleLogin(e) {
+        // ==================== SUPABASE AUTH LOGIC ====================
+        let authMode = 'login'; // 'login' or 'register'
+
+        function switchAuthMode(mode) {
+            authMode = mode;
+            const tabLogin = document.getElementById('tabLogin');
+            const tabRegister = document.getElementById('tabRegister');
+            const authTitle = document.getElementById('authTitle');
+            const authSubtitle = document.getElementById('authSubtitle');
+            const btnAuthText = document.getElementById('btnAuthText');
+            const authAlert = document.getElementById('authAlert');
+            if (authAlert) authAlert.classList.add('hidden');
+
+            if (mode === 'login') {
+                if (tabLogin) tabLogin.className = "flex-1 py-2 rounded-lg bg-white text-slate-800 shadow-sm transition";
+                if (tabRegister) tabRegister.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition";
+                if (authTitle) authTitle.innerText = "Masuk ke Finora";
+                if (authSubtitle) authSubtitle.innerText = "Kelola keuangan Anda dengan mudah dan terintegrasi Supabase";
+                if (btnAuthText) btnAuthText.innerText = "Masuk";
+            } else {
+                if (tabLogin) tabLogin.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition";
+                if (tabRegister) tabRegister.className = "flex-1 py-2 rounded-lg bg-white text-slate-800 shadow-sm transition";
+                if (authTitle) authTitle.innerText = "Daftar Akun Baru";
+                if (authSubtitle) authSubtitle.innerText = "Buat akun Finora gratis langsung ke Supabase Auth";
+                if (btnAuthText) btnAuthText.innerText = "Daftar Sekarang";
+            }
+        }
+
+        function showAuthAlert(message, isError = true) {
+            const el = document.getElementById('authAlert');
+            if (!el) return;
+            el.className = isError
+                ? "p-3 rounded-xl text-xs flex items-center space-x-2 bg-rose-50 text-rose-700 border border-rose-200"
+                : "p-3 rounded-xl text-xs flex items-center space-x-2 bg-emerald-50 text-emerald-700 border border-emerald-200";
+            el.innerHTML = `<i class="fa-solid ${isError ? 'fa-circle-exclamation' : 'fa-circle-check'} text-sm shrink-0"></i><span>${message}</span>`;
+            el.classList.remove('hidden');
+        }
+
+        async function handleAuthSubmit(e) {
             e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const btnText = document.getElementById('btnAuthText');
+            const btn = document.getElementById('btnAuthSubmit');
+
+            if (!email || !password) return;
+
+            btn.disabled = true;
+            const originalText = btnText.innerText;
+            btnText.innerText = "Memproses...";
+
+            try {
+                if (authMode === 'login') {
+                    // Supabase Sign In with Password
+                    if (supabase) {
+                        const { data, error } = await supabase.auth.signInWithPassword({
+                            email: email,
+                            password: password
+                        });
+
+                        if (error) {
+                            showAuthAlert(error.message === 'Invalid login credentials' ? 'Email atau kata sandi salah.' : error.message, true);
+                            btn.disabled = false;
+                            btnText.innerText = originalText;
+                            return;
+                        }
+                        updateUserUI(data.user);
+                    }
+                    showMainApp();
+                } else {
+                    // Supabase Sign Up (Pendaftaran Otomatis)
+                    if (supabase) {
+                        const { data, error } = await supabase.auth.signUp({
+                            email: email,
+                            password: password
+                        });
+
+                        if (error) {
+                            showAuthAlert(error.message, true);
+                            btn.disabled = false;
+                            btnText.innerText = originalText;
+                            return;
+                        }
+
+                        if (data.session) {
+                            // User langsung login otomatis
+                            updateUserUI(data.user);
+                            showMainApp();
+                        } else {
+                            // Pendaftaran sukses, jika email confirmation aktif
+                            showAuthAlert("Pendaftaran berhasil! Akun telah terdaftar di Supabase.", false);
+                            setTimeout(() => {
+                                switchAuthMode('login');
+                            }, 1500);
+                        }
+                    } else {
+                        showMainApp();
+                    }
+                }
+            } catch (err) {
+                showAuthAlert('Terjadi kendala: ' + err.message, true);
+            } finally {
+                btn.disabled = false;
+                btnText.innerText = originalText;
+            }
+        }
+
+        function showMainApp() {
             document.getElementById('pageLogin').classList.add('hidden');
             const desktopSidebar = document.getElementById('desktopSidebar');
             if (desktopSidebar) {
@@ -629,9 +749,18 @@
             document.getElementById('appContent').classList.remove('hidden');
             document.getElementById('mobileNavbar').classList.remove('hidden');
             navigateTo('home');
+            fetchTransactions();
+            fetchGoals();
         }
 
-        function handleLogout() {
+        async function handleLogout() {
+            if (supabase) {
+                try {
+                    await supabase.auth.signOut();
+                } catch (err) {
+                    console.warn('Supabase signOut notice:', err);
+                }
+            }
             const desktopSidebar = document.getElementById('desktopSidebar');
             if (desktopSidebar) {
                 desktopSidebar.classList.remove('md:flex');
@@ -640,6 +769,41 @@
             document.getElementById('appContent').classList.add('hidden');
             document.getElementById('mobileNavbar').classList.add('hidden');
             document.getElementById('pageLogin').classList.remove('hidden');
+        }
+
+        function updateUserUI(user) {
+            if (!user) return;
+            const email = user.email || 'user@finora.app';
+            const name = user.user_metadata?.full_name || email.split('@')[0];
+
+            // Update Desktop Sidebar user card
+            const sideName = document.querySelector('#desktopSidebar h4');
+            const sideEmail = document.querySelector('#desktopSidebar p');
+            if (sideName) sideName.innerText = name;
+            if (sideEmail) sideEmail.innerText = email;
+
+            // Update Profile page user card
+            const profName = document.querySelector('#pageProfile h3');
+            const profEmail = document.querySelector('#pageProfile p');
+            if (profName) profName.innerText = name;
+            if (profEmail) profEmail.innerText = email;
+
+            // Update Home welcome text
+            const welcomeText = document.querySelector('#pageHome h1');
+            if (welcomeText) welcomeText.innerText = `Selamat Datang, ${name}! 👋`;
+        }
+
+        async function checkAuthSession() {
+            if (!supabase) return;
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session && session.user) {
+                    updateUserUI(session.user);
+                    showMainApp();
+                }
+            } catch (err) {
+                console.warn('Session check notice:', err);
+            }
         }
 
         // Navigation Switcher
@@ -1225,6 +1389,7 @@
         window.onload = function () {
             renderTransactions();
             updateBudgetSummary();
+            checkAuthSession();
             fetchTransactions();
             fetchGoals();
             setupRealtime();
