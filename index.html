@@ -864,60 +864,88 @@
 
             if (type === 'Pengeluaran') {
                 amount = -Math.abs(amount);
-                currentBudget -= Math.abs(amount);
             } else {
                 amount = Math.abs(amount);
-                currentBudget += Math.abs(amount);
             }
 
             const nowTime = 'Hari ini, ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-            const newTx = { id: Date.now(), title, category, amount, type, time: nowTime };
 
-            transactions.unshift(newTx);
-            renderTransactions();
-            updateBudgetSummary();
-            closeModal();
-
+            // 1. Simpan ke Supabase terlebih dahulu
             if (finoraDb) {
                 try {
-                    const { data, error } = await finoraDb.from('transactions').insert([{ title, category, amount, type, time: nowTime }]).select();
-                    if (!error && data && data.length > 0) newTx.id = data[0].id;
-                } catch (err) { console.warn('Gagal menyimpan ke Supabase:', err); }
+                    const { data, error } = await finoraDb
+                        .from('transactions')
+                        .insert([{
+                            title: title,
+                            category: category,
+                            amount: amount,
+                            type: type,
+                            time: nowTime
+                        }])
+                        .select();
+
+                    if (error) {
+                        console.error('Error simpan Supabase:', error);
+                        alert('Gagal menyimpan ke database: ' + error.message);
+                        return;
+                    }
+
+                    console.log('Berhasil tersimpan di Supabase:', data);
+                } catch (err) {
+                    console.error('Exception saat simpan:', err);
+                    alert('Terjadi kesalahan koneksi.');
+                    return;
+                }
             }
+
+            // 2. Tutup modal dan panggil ulang data langsung dari database Supabase
+            closeModal();
+            await fetchTransactions();
         }
 
-        function renderTransactions() {
-            const list = document.getElementById('recentTransactionList');
-            if (!list) return;
-            list.innerHTML = '';
-            transactions.slice(0, 5).forEach(t => {
-                const catInfo = categoryIcons[t.category] || { icon: 'fa-receipt', color: 'bg-slate-100 text-slate-600' };
-                const isIncome = t.type === 'Pemasukan';
-                const badgeClass = isIncome ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-600 border-rose-200';
-                const amountClass = isIncome ? 'text-emerald-600 font-bold' : 'text-slate-800 font-bold';
-                const formattedAmt = (isIncome ? '+' : '') + formatRupiah(t.amount);
+        async function fetchTransactions() {
+            if (!finoraDb) return;
+            try {
+                const { data, error } = await finoraDb
+                    .from('transactions')
+                    .select('*')
+                    .order('created_at', { ascending: false });
 
-                list.innerHTML += `
-          <div class="flex items-center justify-between p-3 sm:p-3.5 rounded-2xl hover:bg-slate-50 transition border border-slate-100 bg-white gap-3">
-            <div class="flex items-center space-x-3 min-w-0 flex-1">
-              <div class="w-10 h-10 rounded-xl ${catInfo.color} flex items-center justify-center shrink-0 text-sm shadow-sm">
-                <i class="fa-solid ${catInfo.icon}"></i>
-              </div>
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-1.5 min-w-0">
-                  <h4 class="text-xs sm:text-sm font-semibold text-slate-800 truncate">${t.title}</h4>
-                  <span class="text-[9px] px-1.5 py-0.5 rounded-full border ${badgeClass} font-semibold shrink-0">${t.type}</span>
-                </div>
-                <p class="text-[10px] text-slate-400 mt-0.5 truncate">${t.category} • ${t.time}</p>
-              </div>
-            </div>
-            <div class="text-right shrink-0">
-              <span class="text-xs sm:text-sm font-bold ${amountClass} whitespace-nowrap block tabular-nums">${formattedAmt}</span>
-            </div>
-          </div>
-        `;
-            });
-            updateTotalBalanceDisplay();
+                if (error) {
+                    console.error('Error fetch transactions:', error.message);
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    transactions = data.map(t => ({
+                        id: t.id,
+                        title: t.title,
+                        category: t.category,
+                        amount: parseFloat(t.amount),
+                        type: t.type,
+                        time: t.time || 'Hari ini'
+                    }));
+
+                    // Hitung ulang saldo berdasar transaksi aktual di DB
+                    let totalFromTx = 30000000;
+                    transactions.forEach(t => {
+                        if (t.type === 'Pengeluaran') totalFromTx -= Math.abs(t.amount);
+                        else totalFromTx += Math.abs(t.amount);
+                    });
+                    currentBudget = totalFromTx;
+                } else {
+                    // Jika DB masih kosong, jadikan array transaksi kosong
+                    transactions = [];
+                }
+
+                renderTransactions();
+                updateBudgetSummary();
+                if (typeof renderAnalyticsHistoryList === 'function') {
+                    renderAnalyticsHistoryList();
+                }
+            } catch (err) {
+                console.warn('Fetch transactions error:', err);
+            }
         }
 
         function openGoalsModal() {
